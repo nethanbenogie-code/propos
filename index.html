@@ -3483,7 +3483,8 @@ function buildVerifyQRContent(sale) {
   ].join(':');
 }
 
-
+// Returns OR number from Cloud Function if available, falls back to local counter
+async function getORNumber() {
   if (_fbFunctions && storageMode === 'firebase' && isOnline) {
     try {
       const bir = getBIR();
