@@ -107,6 +107,12 @@ manifest.json                  PWA manifest
 firestore.rules                Firebase security rules
 functions-index.js             Firebase Cloud Functions
 
+README.md                      This file
+LICENSE                        Proprietary commercial license
+EULA.md                        Plain-language end-user agreement
+PRICING.md                     License tiers and pricing
+CHANGELOG.md                   Version history
+
 docs/
   MLEA_POS_System_Description.docx        BIR accreditation: technical description
   MLEA_POS_Application_Sworn_Statement.docx  BIR accreditation: application + sworn statement
@@ -179,7 +185,7 @@ Works on any modern browser (Chrome, Edge, Firefox, Safari) on desktop or mobile
 
 **MLEA POS is proprietary commercial software.** It is not open-source and may not be copied, redistributed, resold, or modified without a valid license. See the [LICENSE](LICENSE) file for the full terms and [EULA.md](EULA.md) for a plain-language summary.
 
-To purchase a license, contact Gieo Software Solutions (payment via GCash or PayPal).
+To purchase a license, contact Gieo Software Solutions (payment via GCash or PayPal). See [PRICING.md](PRICING.md) for license tiers.
 
 Copyright © 2026 Gieo Software Solutions. All rights reserved.
 
