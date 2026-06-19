@@ -1,21 +1,114 @@
-MIT License
+MLEA POS — PROPRIETARY SOFTWARE LICENSE
+========================================
 
-Copyright (c) 2026 Roger (Gieo)
+Copyright © 2026 Gieo Software Solutions. All Rights Reserved.
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+IMPORTANT — READ CAREFULLY. This is a legal agreement between you (either an
+individual or a single business entity, "Licensee") and Gieo Software Solutions
+("Licensor") for the MLEA POS software product, including the application files,
+documentation, and any associated materials (collectively, the "Software").
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+This Software is PROPRIETARY and COMMERCIAL. It is NOT open-source, NOT free
+software, and is NOT released under any open-source license. By purchasing,
+downloading, installing, or using the Software, you agree to be bound by the
+terms of this License and the accompanying End-User License Agreement (EULA.md).
+If you do not agree, do not install or use the Software.
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+
+1. OWNERSHIP
+   The Software is owned by Gieo Software Solutions and is protected by Philippine
+   copyright law and international copyright treaties. The Licensor retains all
+   right, title, and interest in and to the Software, including all intellectual
+   property rights. No ownership is transferred to the Licensee.
+
+
+2. GRANT OF LICENSE
+   Subject to payment of the applicable license fee and compliance with this
+   License, the Licensor grants the Licensee a non-exclusive, non-transferable,
+   revocable license to install and use the Software solely for the Licensee's
+   own internal business operations, limited to the number of branches, devices,
+   or terminals specified in the purchased license tier.
+
+
+3. RESTRICTIONS
+   The Licensee shall NOT, and shall not permit any third party to:
+   (a) copy, reproduce, or distribute the Software except as expressly permitted;
+   (b) sell, resell, sublicense, rent, lease, lend, or otherwise transfer the
+       Software or license to any third party;
+   (c) modify, adapt, translate, or create derivative works of the Software;
+   (d) reverse engineer, decompile, disassemble, or attempt to derive the source
+       code, except to the extent expressly permitted by applicable law;
+   (e) remove, alter, or obscure any copyright, trademark, or proprietary notices;
+   (f) use the Software to develop a competing product;
+   (g) circumvent, disable, or tamper with any license-control or security
+       mechanism in the Software;
+   (h) make the Software available on a public network where it could be
+       downloaded or used by multiple unauthorized users.
+
+
+4. LICENSE TIERS AND DEVICE LIMITS
+   The Software is licensed per the tier purchased. Each license is valid for the
+   number of devices/branches stated at the time of purchase. Additional devices
+   or branches require additional licenses. The Licensor may enforce device limits
+   through technical means.
+
+
+5. TERM AND TERMINATION
+   This License is effective until terminated. It terminates automatically and
+   immediately without notice if the Licensee breaches any term. Upon termination,
+   the Licensee must cease all use of the Software and destroy all copies. The
+   Licensor may revoke a license that is used in violation of this agreement.
+
+
+6. NO WARRANTY
+   THE SOFTWARE IS PROVIDED "AS IS" AND "AS AVAILABLE" WITHOUT WARRANTY OF ANY
+   KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO WARRANTIES OF
+   MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, AND NON-INFRINGEMENT.
+   THE LICENSOR DOES NOT WARRANT THAT THE SOFTWARE WILL BE ERROR-FREE OR
+   UNINTERRUPTED.
+
+
+7. BIR COMPLIANCE DISCLAIMER
+   The Software provides features intended to support compliance with Bureau of
+   Internal Revenue (BIR) requirements. However, the Licensor makes NO
+   representation or warranty that use of the Software, by itself, constitutes
+   legal compliance. The Licensee is solely responsible for obtaining BIR
+   accreditation, Permit to Use (PTU), Computerized Accounting System (CAS)
+   registration where applicable, and for all tax filings. The Licensee must
+   consult the BIR and a qualified tax professional.
+
+
+8. LIMITATION OF LIABILITY
+   TO THE MAXIMUM EXTENT PERMITTED BY LAW, THE LICENSOR SHALL NOT BE LIABLE FOR
+   ANY INDIRECT, INCIDENTAL, SPECIAL, CONSEQUENTIAL, OR PUNITIVE DAMAGES, OR ANY
+   LOSS OF PROFITS, REVENUE, DATA, OR BUSINESS, ARISING OUT OF OR RELATED TO THE
+   USE OR INABILITY TO USE THE SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+   SUCH DAMAGES. THE LICENSOR'S TOTAL AGGREGATE LIABILITY SHALL NOT EXCEED THE
+   AMOUNT PAID BY THE LICENSEE FOR THE LICENSE.
+
+
+9. DATA AND PRIVACY
+   The Licensee is responsible for the data it processes using the Software,
+   including customer information, and for compliance with the Philippine Data
+   Privacy Act of 2012 (RA 10173) and other applicable laws.
+
+
+10. GOVERNING LAW
+    This License is governed by the laws of the Republic of the Philippines.
+    Any dispute shall be subject to the exclusive jurisdiction of the courts of
+    the Philippines.
+
+
+11. ENTIRE AGREEMENT
+    This License, together with the EULA, constitutes the entire agreement between
+    the parties regarding the Software and supersedes all prior agreements.
+
+
+For licensing, pricing, and support inquiries, contact:
+
+    Gieo Software Solutions
+    Email:  [your-email@example.com]
+    Phone:  [your-contact-number]
+
+Unauthorized copying, distribution, or use of this Software is strictly
+prohibited and may result in civil and criminal penalties.
