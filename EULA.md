@@ -78,9 +78,9 @@ This Agreement is governed by the laws of the Republic of the Philippines.
 **Gieo Software Solutions**
 For purchases, pricing, support, or questions:
 
-- 📧 Email: **[your-email@example.com]**
-- 📱 Phone / GCash: **[your-contact-number]**
-- 💳 PayPal: **[your-paypal]**
+- 📧 Email: ** etzchaim06@gmail.com **
+- 📱 Phone / GCash: ** **
+- 💳 PayPal: ** ogie613@hotmail.com **
 
 ---
 
