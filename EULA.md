@@ -79,7 +79,7 @@ This Agreement is governed by the laws of the Republic of the Philippines.
 For purchases, pricing, support, or questions:
 
 - 📧 Email: ** etzchaim06@gmail.com **
-- 📱 Phone / GCash: ** **
+- 📱 Phone / GCash: ** https://www.facebook.com/messages/t/1079644738570404 **
 - 💳 PayPal: ** ogie613@hotmail.com **
 
 ---
