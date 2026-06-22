@@ -30,20 +30,7 @@
 }
 body{font-family:var(--fb);background:var(--bg-void);color:var(--text);overflow-x:hidden;min-height:100vh}
 .wrap{max-width:480px;margin:0 auto;min-height:100vh;background:var(--bg-deep);position:relative;overflow-x:hidden}
-/* WIDER DESKTOP LAYOUT */
-@media(min-width:1024px){
-  .wrap{max-width:1400px;width:95%}
-  .wrap .hdr, .wrap #mainContent{max-width:1400px;margin:0 auto}
-  .wrap .sidebar{left:-300px;width:300px}
-  .wrap .sidebar.on{left:0}
-  .wrap .prod-grid{grid-template-columns:repeat(4,1fr)}
-  .wrap .metrics{grid-template-columns:repeat(4,1fr)}
-  .wrap .print-grid{grid-template-columns:repeat(4,1fr)}
-}
-@media(min-width:768px) and (max-width:1023px){
-  .wrap{max-width:768px}
-  .wrap .prod-grid{grid-template-columns:repeat(3,1fr)}
-}
+@media(min-width:768px){.wrap{max-width:768px}}
 /* AMBIENT */
 .amb{position:fixed;inset:0;pointer-events:none;z-index:0;overflow:hidden}
 .amb::before{content:'';position:absolute;width:500px;height:500px;border-radius:50%;background:radial-gradient(circle,rgba(212,168,83,0.06),transparent 70%);top:-100px;right:-100px;animation:drift 20s ease-in-out infinite}
@@ -455,7 +442,7 @@ function toast(msg,color='gold',dur=3200){
 // ════════════════════════════════════════════
 // STORAGE — LOCAL
 // ════════════════════════════════════════════
-const STORES=['products','sales','users','settings','branches','activityLogs','suppliers','purchaseOrders','voidedSales','heldSales','returns','customers'];
+const STORES=['products','sales','users','settings','branches','activityLogs','suppliers','purchaseOrders','voidedSales','heldSales','returns','customers','expenses'];
 const LocalDB={
   init(){STORES.forEach(s=>{if(!localStorage.getItem('mlea_'+s))localStorage.setItem('mlea_'+s,'[]')})},
   getAll(k){try{return JSON.parse(localStorage.getItem('mlea_'+k)||'[]')}catch{return[]}},
@@ -2434,6 +2421,11 @@ function renderReports(el){
   const cardSales=ms.filter(s=>s.paymentMethod==='card');
   const splitSales=ms.filter(s=>s.paymentMethod==='split');
   const vatDue=vat-refunds*taxRate;
+  // Expenses for the month
+  const monthExp=getMyData('expenses').filter(e=>(e.date||'').startsWith(m));
+  const expTotal=monthExp.reduce((a,e)=>a+(e.amount||0),0);
+  const grossProfit=rev-cost;
+  const netProfit=grossProfit-expTotal;
   el.innerHTML=`<h4>Reports — ${new Date().toLocaleDateString('en-US',{month:'long',year:'numeric'})}</h4>
     <div class="card" style="border-left:3px solid var(--gold)">
       <h5>Revenue</h5>
@@ -2443,8 +2435,16 @@ function renderReports(el){
       </div>
       <div class="metrics" style="margin-top:8px">
         <div class="met"><div class="met-v">${fc(vs)}</div><div class="met-l">VATable Sales</div></div>
-        <div class="met"><div class="met-v" style="color:var(--emerald)">${fc(rev-cost)}</div><div class="met-l">Gross Profit</div></div>
+        <div class="met"><div class="met-v" style="color:var(--emerald)">${fc(grossProfit)}</div><div class="met-l">Gross Profit</div></div>
       </div>
+    </div>
+    <div class="card" style="border-left:3px solid var(--rose)">
+      <h5>💸 Expenses & Net Profit</h5>
+      <div class="metrics">
+        <div class="met"><div class="met-v" style="color:var(--rose)">${fc(expTotal)}</div><div class="met-l">Expenses (${monthExp.length})</div></div>
+        <div class="met"><div class="met-v" style="color:${netProfit>=0?'var(--emerald)':'var(--rose)'}">${fc(netProfit)}</div><div class="met-l">Net Profit</div></div>
+      </div>
+      <p style="font-size:.72em;color:var(--text3);margin-top:6px">Net Profit = Gross Profit − Expenses. <span onclick="sw('expenses')" style="color:var(--blue);cursor:pointer;text-decoration:underline">Manage expenses →</span></p>
     </div>
     <div class="card">
       <h5>🏛️ BIR Tax Summary</h5>
@@ -2471,6 +2471,7 @@ function renderReports(el){
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:4px">
       <button class="btn bp" onclick="exportCSV('sales')">📥 Sales CSV</button>
       <button class="btn bs" onclick="exportCSV('inventory')">📥 Inventory CSV</button>
+      <button class="btn bw" onclick="exportExpensesCSV()">💸 Expenses CSV</button>
       <button class="btn bw" onclick="exportBIRReport()">🏛️ BIR Report CSV</button>
       <button class="btn bd" onclick="downloadBackup()">💾 Full Backup</button>
     </div>`;
@@ -3771,6 +3772,122 @@ function export2550M() {
 }
 
 // ════════════════════════════════════════════
+// EXPENSES MODULE
+// Tracks operating expenses (snacks, supplies, etc.)
+// Categorized, date-filtered, with monthly totals.
+// ════════════════════════════════════════════
+const EXPENSE_CATEGORIES = ['Supplies','Food/Meals','Utilities','Rent','Salaries','Transport','Maintenance','Marketing','Permits/Fees','Other'];
+
+function renderExpenses(el){
+  const all=getMyData('expenses').slice().sort((a,b)=>(b.date||'').localeCompare(a.date||''));
+  // Current-month filter context
+  const month=el._expMonth||new Date().toISOString().substring(0,7);
+  const monthExp=all.filter(e=>(e.date||'').startsWith(month));
+  const monthTotal=monthExp.reduce((s,e)=>s+(e.amount||0),0);
+  const allTotal=all.reduce((s,e)=>s+(e.amount||0),0);
+  // Category breakdown for the month
+  const byCat={};
+  monthExp.forEach(e=>{const c=e.category||'Other';byCat[c]=(byCat[c]||0)+(e.amount||0);});
+  const catRows=Object.entries(byCat).sort((a,b)=>b[1]-a[1])
+    .map(([c,v])=>`<div style="display:flex;justify-content:space-between;font-size:.8em;padding:4px 0;border-bottom:1px solid rgba(255,255,255,.04)"><span style="color:var(--text2)">${c}</span><span style="font-family:var(--fm)">${fc(v)}</span></div>`).join('');
+
+  el.innerHTML=`
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+      <h4 style="margin:0">💸 Expenses</h4>
+      <button class="btn bp bsm" onclick="showExpenseModal()">+ Add Expense</button>
+    </div>
+    <div class="metrics" style="margin-bottom:12px">
+      <div class="met"><div class="met-v" style="color:var(--rose)">${fc(monthTotal)}</div><div class="met-l">This Month</div></div>
+      <div class="met"><div class="met-v">${monthExp.length}</div><div class="met-l">Entries</div></div>
+      <div class="met"><div class="met-v" style="color:var(--gold)">${fc(allTotal)}</div><div class="met-l">All-Time</div></div>
+    </div>
+    <div class="card" style="margin-bottom:12px">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+        <label style="font-size:.78em;color:var(--text2)">Month:</label>
+        <input type="month" id="expMonth" value="${month}" onchange="(function(){const el=document.getElementById('mainContent');el._expMonth=document.getElementById('expMonth').value;renderExpenses(el);})()" style="margin-bottom:0;width:auto;font-family:var(--fm);font-size:.85em">
+        <button class="btn bw bxs" style="margin-left:auto" onclick="exportExpensesCSV()">📥 CSV</button>
+      </div>
+      ${catRows?`<div style="margin-top:8px"><div style="font-size:.72em;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px">By Category</div>${catRows}</div>`:''}
+    </div>
+    ${monthExp.length?monthExp.map(e=>`
+      <div class="card" style="padding:12px 14px">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <div style="min-width:0;flex:1">
+            <div style="font-family:var(--ff);font-weight:600;font-size:.9em">${e.description||'(no description)'}</div>
+            <div style="display:flex;gap:8px;align-items:center;margin-top:3px">
+              <span class="rbadge rb-cashier" style="font-size:.62em">${e.category||'Other'}</span>
+              <span style="font-size:.72em;color:var(--text3)">${e.date||''}</span>
+            </div>
+          </div>
+          <div style="text-align:right;display:flex;align-items:center;gap:8px">
+            <span style="font-family:var(--fm);font-weight:700;color:var(--rose)">${fc(e.amount||0)}</span>
+            <button class="btn bw bxs" onclick="showExpenseModal(${e.id})">✎</button>
+            <button class="btn bd bxs" onclick="deleteExpense(${e.id})">🗑</button>
+          </div>
+        </div>
+      </div>`).join(''):'<div class="empty-st"><div class="ei">💸</div><p>No expenses for this month</p></div>'}`;
+}
+
+function showExpenseModal(id){
+  const e=id?DB.getById('expenses',id):null;
+  const today=new Date().toISOString().split('T')[0];
+  openModal(`<h4>${e?'✎ Edit':'💸 Add'} Expense</h4>
+    <label class="inp-label">Description *</label>
+    <input type="text" id="expDesc" value="${e?(e.description||'').replace(/"/g,'&quot;'):''}" placeholder="e.g. Office supplies">
+    <label class="inp-label">Amount (₱) *</label>
+    <input type="number" id="expAmt" value="${e?e.amount:''}" placeholder="0.00" step="0.01" min="0">
+    <label class="inp-label">Category</label>
+    <select id="expCat">${EXPENSE_CATEGORIES.map(c=>`<option value="${c}" ${e&&e.category===c?'selected':''}>${c}</option>`).join('')}</select>
+    <label class="inp-label">Date</label>
+    <input type="date" id="expDate" value="${e?e.date:today}">
+    <div id="expErr" style="color:var(--rose);font-size:.78em;min-height:16px;margin:6px 0;font-weight:600"></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+      <button class="btn bd" onclick="closeModal()">Cancel</button>
+      <button class="btn bp" onclick="saveExpense(${id||'null'})">${e?'Save Changes':'Add Expense'}</button>
+    </div>`);
+  setTimeout(()=>document.getElementById('expDesc')?.focus(),100);
+}
+
+function saveExpense(id){
+  const desc=(document.getElementById('expDesc')?.value||'').trim();
+  const amt=parseFloat(document.getElementById('expAmt')?.value)||0;
+  const cat=document.getElementById('expCat')?.value||'Other';
+  const date=document.getElementById('expDate')?.value||new Date().toISOString().split('T')[0];
+  const err=document.getElementById('expErr');
+  if(!desc){if(err)err.textContent='Description is required';return;}
+  if(amt<=0){if(err)err.textContent='Amount must be greater than zero';return;}
+  if(id&&id!=='null'){
+    const e=DB.getById('expenses',parseInt(id));
+    if(e){e.description=desc;e.amount=amt;e.category=cat;e.date=date;DB.update('expenses',e);}
+    logAct('Expense Updated',`${desc}: ${fc(amt)}`);
+  }else{
+    DB.add('expenses',{description:desc,amount:amt,category:cat,date,branchId:currentUser.branchId,recordedBy:currentUser.name});
+    logAct('Expense Added',`${desc}: ${fc(amt)}`);
+  }
+  closeModal();sw('expenses');toast('Expense saved ✓','emerald');
+}
+
+async function deleteExpense(id){
+  const e=DB.getById('expenses',id);if(!e)return;
+  const ok=await confirm2(`Delete expense "${e.description}" (${fc(e.amount)})?`,'🗑️',true);
+  if(!ok)return;
+  DB.delete('expenses',id);
+  logAct('Expense Deleted',`${e.description}: ${fc(e.amount)}`);
+  sw('expenses');toast('Expense deleted','gold');
+}
+
+function exportExpensesCSV(){
+  const all=getMyData('expenses').slice().sort((a,b)=>(a.date||'').localeCompare(b.date||''));
+  let csv='Date,Description,Category,Amount\n';
+  all.forEach(e=>csv+=`${e.date||''},"${(e.description||'').replace(/"/g,"'")}",${e.category||'Other'},${(e.amount||0).toFixed(2)}\n`);
+  const tot=all.reduce((s,e)=>s+(e.amount||0),0);
+  csv+=`,,TOTAL,${tot.toFixed(2)}\n`;
+  const blob=new Blob([csv],{type:'text/csv'});const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);a.download=`expenses_${new Date().toISOString().split('T')[0]}.csv`;a.click();
+  toast('Expenses exported ✓','emerald');
+}
+
+// ════════════════════════════════════════════
 // FEATURE 2: PURCHASES BOOK (RR 9-2009)
 // Records all purchase transactions from
 // purchase orders and supplier invoices.
@@ -4097,7 +4214,7 @@ function renderORReservation(el) {
 // ════════════════════════════════════════════
 let _idb = null;
 const IDB_NAME = 'mlea_pos_v6';
-const IDB_VER = 2;
+const IDB_VER = 3;
 
 async function initIDB() {
   return new Promise((resolve, reject) => {
@@ -4650,7 +4767,8 @@ renderSidebar = function() {
   if (currentUser.role === 'admin' || currentUser.role === 'manager') {
     // Add customer + BIR books items if not already present
     if (!nav.innerHTML.includes('sw(\'customers\')')) {
-      const custItem = `<div class="sb-item" onclick="sw('customers')"><span class="sb-icon">👤</span>Customers</div>`;
+      const custItem = `<div class="sb-item" onclick="sw('customers')"><span class="sb-icon">👤</span>Customers</div>`
+        + `<div class="sb-item" onclick="sw('expenses')"><span class="sb-icon">💸</span>Expenses</div>`;
       const bookItems = `<div class="sb-item" onclick="sw('salesBook')"><span class="sb-icon">📒</span>Sales Book</div>`
         + `<div class="sb-item" onclick="sw('purchasesBook')"><span class="sb-icon">📗</span>Purchases Book</div>`
         + `<div class="sb-item" onclick="sw('form2550M')"><span class="sb-icon">🏛️</span>Form 2550M</div>`
@@ -4676,6 +4794,7 @@ viewMap.form2550M = render2550M;
 viewMap.purchasesBook = renderPurchasesBook;
 viewMap.auditExport = renderAuditExport;
 viewMap.orReservation = renderORReservation;
+viewMap.expenses = renderExpenses;
 
 // ════════════════════════════════════════════
 // PATCH: renderSettings — add Phase 3/4 settings
