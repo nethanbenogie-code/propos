@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-<title>MLEA POS v6 + PWA</title>
+<title>MLEA POS v6 — BIR-Ready + Firebase + PWA</title>
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#d4a853">
@@ -1038,6 +1038,10 @@ const viewMap={
   actLog:renderActLog,fbSetup:renderFBSetup,
 };
 function sw(view){
+  // Reset product list filters when leaving the products view
+  if(currentView!==view&&view!=='allProducts'&&view!=='inventory'){
+    _prodSearch='';_prodCat='all';_prodStock='all';_prodSort='name';_prodPage=1;
+  }
   currentView=view;closeSB();resetSesTimer();
   const el=document.getElementById('mainContent');
   el.style.opacity='0';el.style.transform='translateY(8px)';
@@ -1822,46 +1826,148 @@ async function deletePO(id){
 // ════════════════════════════════════════════
 // PRODUCTS
 // ════════════════════════════════════════════
+// Product list view state (persists across re-renders within a session)
+let _prodSearch='', _prodCat='all', _prodStock='all', _prodSort='name', _prodPage=1;
+const PROD_PAGE_SIZE=25;
+
 function renderProducts(el){
-  const prods=currentView==='allProducts'?DB.getAll('products'):getMyData('products');
-  const suppliers=DB.getAll('suppliers');const lowItems=getLowStock();
-  let html=`<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px"><h4 style="margin:0">Products</h4><button class="btn bp bsm" onclick="showProductModal()">+ Add</button></div>`;
-  if(lowItems.length)html+=`<div style="background:rgba(240,101,119,.08);border:1px solid rgba(240,101,119,.25);border-radius:var(--r2);padding:12px 16px;margin-bottom:12px">
-    <div style="display:flex;justify-content:space-between;margin-bottom:8px">
-      <span style="font-family:var(--ff);font-weight:700;font-size:.85em;color:var(--rose)">⚠️ ${lowItems.length} Low Stock</span>
-      <span style="font-size:.68em;color:var(--text2)">Threshold: ≤${lowStockThresh}</span>
-    </div>
-    ${lowItems.map(p=>`<div style="display:flex;justify-content:space-between;padding:6px 10px;background:rgba(0,0,0,.2);border-radius:6px;margin-bottom:4px">
-      <span style="font-size:.78em">${p.name}</span>
-      <span style="font-family:var(--fm);font-size:.75em;color:${p.stock===0?'var(--rose)':'#fbb923'};font-weight:700">${p.stock===0?'OUT':p.stock+' left'}</span>
-    </div>`).join('')}
+  const allProds=currentView==='allProducts'?DB.getAll('products'):getMyData('products');
+  const lowItems=getLowStock();
+  // Build category list
+  const cats=[...new Set(allProds.map(p=>p.category||'General'))].sort();
+
+  // Apply filters
+  let prods=allProds.slice();
+  if(_prodSearch){
+    const q=_prodSearch.toLowerCase();
+    prods=prods.filter(p=>
+      (p.name||'').toLowerCase().includes(q)||
+      (p.sku||'').toLowerCase().includes(q)||
+      (p.barcode||'').toLowerCase().includes(q)||
+      (p.category||'').toLowerCase().includes(q)
+    );
+  }
+  if(_prodCat!=='all')prods=prods.filter(p=>(p.category||'General')===_prodCat);
+  if(_prodStock==='low')prods=prods.filter(p=>p.stock<=lowStockThresh&&p.stock>0);
+  else if(_prodStock==='out')prods=prods.filter(p=>p.stock<=0);
+  else if(_prodStock==='in')prods=prods.filter(p=>p.stock>lowStockThresh);
+  // Sort
+  prods.sort((a,b)=>{
+    if(_prodSort==='name')return (a.name||'').localeCompare(b.name||'');
+    if(_prodSort==='name_desc')return (b.name||'').localeCompare(a.name||'');
+    if(_prodSort==='price')return (b.price||0)-(a.price||0);
+    if(_prodSort==='price_asc')return (a.price||0)-(b.price||0);
+    if(_prodSort==='stock')return (a.stock||0)-(b.stock||0);
+    if(_prodSort==='stock_desc')return (b.stock||0)-(a.stock||0);
+    return 0;
+  });
+
+  const totalFiltered=prods.length;
+  const totalPages=Math.max(1,Math.ceil(totalFiltered/PROD_PAGE_SIZE));
+  if(_prodPage>totalPages)_prodPage=totalPages;
+  if(_prodPage<1)_prodPage=1;
+  const pageStart=(_prodPage-1)*PROD_PAGE_SIZE;
+  const pageProds=prods.slice(pageStart,pageStart+PROD_PAGE_SIZE);
+
+  let html=`<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+    <h4 style="margin:0">Products <span style="font-size:.6em;color:var(--text3);font-weight:400">(${allProds.length})</span></h4>
+    <button class="btn bp bsm" onclick="showProductModal()">+ Add</button>
   </div>`;
-  html+=`<div class="tbl-wrap"><table><thead><tr>
-    <th>Name</th><th>Price</th><th>Stock</th><th>Unit</th><th>Cat.</th><th>Barcode</th><th>VAT</th>
-    ${currentUser.role==='admin'?'<th>Branch</th>':''}
-    <th></th>
-  </tr></thead><tbody>
-  ${prods.map(p=>{
-    const bn=p.branchId?(DB.getById('branches',p.branchId)||{name:'?'}).name:'🌐 Global';
-    const vl=p.vatExempt?'<span style="color:var(--blue);font-size:.72em">VE</span>':p.zeroRated?'<span style="color:var(--emerald);font-size:.72em">0%</span>':'<span style="color:var(--text2);font-size:.72em">VAT</span>';
-    return`<tr>
-      <td><strong style="color:var(--text)">${p.name}</strong></td>
-      <td style="color:var(--gold);font-family:var(--fm)">${fc(p.price)}</td>
-      <td class="${p.stock<=lowStockThresh?'stock-low':''}">${p.stock}</td>
-      <td style="font-size:.75em">${p.unit||'pcs'}</td>
-      <td>${p.category||'—'}</td>
-      <td style="font-family:var(--fm);font-size:.7em">${p.barcode||'—'}</td>
-      <td>${vl}</td>
-      ${currentUser.role==='admin'?`<td style="font-size:.72em">${bn}</td>`:''}
-      <td style="white-space:nowrap">
-        <button class="btn bs bxs" onclick="adjStock(${p.id})">+</button>
-        <button class="btn bw bxs" onclick="showProductModal(${p.id})">✎</button>
-        <button class="btn bd bxs" onclick="deleteProduct(${p.id})">🗑</button>
-      </td>
-    </tr>`;}).join('')}
-  </tbody></table></div>
-  ${!prods.length?'<div class="empty-st"><div class="ei">📦</div><p>No products yet</p></div>':''}`;
+
+  // ── Search + filter bar ──
+  html+=`<div class="card" style="padding:12px 14px;margin-bottom:12px">
+    <div class="pos-search" style="margin-bottom:8px">
+      <input type="text" id="prodSearch" placeholder="🔍 Search name, SKU, barcode, category…" value="${_prodSearch.replace(/"/g,'&quot;')}"
+        oninput="_prodSearch=this.value;_prodPage=1;_reRenderProducts(this)">
+    </div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+      <select id="prodCat" onchange="_prodCat=this.value;_prodPage=1;_reRenderProducts()" style="margin-bottom:0;flex:1;min-width:110px;font-size:.8em">
+        <option value="all" ${_prodCat==='all'?'selected':''}>All Categories</option>
+        ${cats.map(c=>`<option value="${c}" ${_prodCat===c?'selected':''}>${c}</option>`).join('')}
+      </select>
+      <select id="prodStock" onchange="_prodStock=this.value;_prodPage=1;_reRenderProducts()" style="margin-bottom:0;flex:1;min-width:100px;font-size:.8em">
+        <option value="all" ${_prodStock==='all'?'selected':''}>All Stock</option>
+        <option value="in" ${_prodStock==='in'?'selected':''}>In Stock</option>
+        <option value="low" ${_prodStock==='low'?'selected':''}>Low Stock</option>
+        <option value="out" ${_prodStock==='out'?'selected':''}>Out of Stock</option>
+      </select>
+      <select id="prodSort" onchange="_prodSort=this.value;_reRenderProducts()" style="margin-bottom:0;flex:1;min-width:110px;font-size:.8em">
+        <option value="name" ${_prodSort==='name'?'selected':''}>Name A→Z</option>
+        <option value="name_desc" ${_prodSort==='name_desc'?'selected':''}>Name Z→A</option>
+        <option value="price" ${_prodSort==='price'?'selected':''}>Price High→Low</option>
+        <option value="price_asc" ${_prodSort==='price_asc'?'selected':''}>Price Low→High</option>
+        <option value="stock" ${_prodSort==='stock'?'selected':''}>Stock Low→High</option>
+        <option value="stock_desc" ${_prodSort==='stock_desc'?'selected':''}>Stock High→Low</option>
+      </select>
+    </div>
+    ${(_prodSearch||_prodCat!=='all'||_prodStock!=='all')?`<div style="margin-top:8px;display:flex;justify-content:space-between;align-items:center">
+      <span style="font-size:.74em;color:var(--text2)">${totalFiltered} match${totalFiltered===1?'':'es'}</span>
+      <button class="btn bd bxs" onclick="_prodSearch='';_prodCat='all';_prodStock='all';_prodPage=1;sw('${currentView}')">✕ Clear filters</button>
+    </div>`:''}
+  </div>`;
+
+  if(lowItems.length&&!_prodSearch&&_prodStock==='all')html+=`<div style="background:rgba(240,101,119,.08);border:1px solid rgba(240,101,119,.25);border-radius:var(--r2);padding:10px 14px;margin-bottom:12px">
+    <div style="display:flex;justify-content:space-between;align-items:center">
+      <span style="font-family:var(--ff);font-weight:700;font-size:.82em;color:var(--rose)">⚠️ ${lowItems.length} item(s) low/out of stock</span>
+      <button class="btn bd bxs" onclick="_prodStock='low';_prodPage=1;sw('${currentView}')">View</button>
+    </div>
+  </div>`;
+
+  // ── Table ──
+  if(pageProds.length){
+    html+=`<div class="tbl-wrap"><table><thead><tr>
+      <th>Name</th><th>Price</th><th>Stock</th><th>Unit</th><th>Cat.</th><th>VAT</th>
+      ${currentUser.role==='admin'?'<th>Branch</th>':''}
+      <th></th>
+    </tr></thead><tbody>
+    ${pageProds.map(p=>{
+      const bn=p.branchId?(DB.getById('branches',p.branchId)||{name:'?'}).name:'🌐';
+      const vl=p.vatExempt?'<span style="color:var(--blue);font-size:.72em">VE</span>':p.zeroRated?'<span style="color:var(--emerald);font-size:.72em">0%</span>':'<span style="color:var(--text2);font-size:.72em">VAT</span>';
+      return`<tr>
+        <td><strong style="color:var(--text)">${p.name}</strong>${p.sku?`<br><span style="font-size:.65em;color:var(--text3);font-family:var(--fm)">${p.sku}</span>`:''}</td>
+        <td style="color:var(--gold);font-family:var(--fm)">${fc(p.price)}</td>
+        <td class="${p.stock<=lowStockThresh?'stock-low':''}">${p.stock}</td>
+        <td style="font-size:.75em">${p.unit||'pcs'}</td>
+        <td style="font-size:.78em">${p.category||'—'}</td>
+        <td>${vl}</td>
+        ${currentUser.role==='admin'?`<td style="font-size:.72em">${bn}</td>`:''}
+        <td style="white-space:nowrap">
+          <button class="btn bs bxs" onclick="adjStock(${p.id})">+</button>
+          <button class="btn bw bxs" onclick="showProductModal(${p.id})">✎</button>
+          <button class="btn bd bxs" onclick="deleteProduct(${p.id})">🗑</button>
+        </td>
+      </tr>`;}).join('')}
+    </tbody></table></div>`;
+
+    // ── Pagination ──
+    if(totalPages>1){
+      html+=`<div style="display:flex;align-items:center;justify-content:center;gap:8px;margin-top:12px;flex-wrap:wrap">
+        <button class="btn bw bsm" ${_prodPage<=1?'disabled':''} onclick="_prodPage=1;sw('${currentView}')">« First</button>
+        <button class="btn bw bsm" ${_prodPage<=1?'disabled':''} onclick="_prodPage--;sw('${currentView}')">‹ Prev</button>
+        <span style="font-size:.82em;color:var(--text2);font-family:var(--fm);padding:0 6px">Page ${_prodPage} / ${totalPages}</span>
+        <button class="btn bw bsm" ${_prodPage>=totalPages?'disabled':''} onclick="_prodPage++;sw('${currentView}')">Next ›</button>
+        <button class="btn bw bsm" ${_prodPage>=totalPages?'disabled':''} onclick="_prodPage=${totalPages};sw('${currentView}')">Last »</button>
+      </div>
+      <p style="text-align:center;font-size:.72em;color:var(--text3);margin-top:6px">Showing ${pageStart+1}–${Math.min(pageStart+PROD_PAGE_SIZE,totalFiltered)} of ${totalFiltered}</p>`;
+    }
+  }else{
+    html+=`<div class="empty-st"><div class="ei">🔍</div><p>${allProds.length?'No products match your filters':'No products yet'}</p>${allProds.length?'<button class="btn bd bsm" style="margin-top:8px" onclick="_prodSearch=\'\';_prodCat=\'all\';_prodStock=\'all\';sw(\''+currentView+'\')">Clear filters</button>':''}</div>`;
+  }
+
   el.innerHTML=html;
+}
+
+// Re-render product list in place without losing search-input focus
+function _reRenderProducts(inputEl){
+  const el=document.getElementById('mainContent');
+  if(!el)return;
+  const hadFocus=inputEl&&document.activeElement===inputEl;
+  const caret=inputEl?inputEl.selectionStart:null;
+  renderProducts(el);
+  if(hadFocus){
+    const ns=document.getElementById('prodSearch');
+    if(ns){ns.focus();if(caret!=null)try{ns.setSelectionRange(caret,caret);}catch(e){}}
+  }
 }
 function showProductModal(id){
   const p=id?DB.getById('products',id):null;
