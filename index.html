@@ -597,6 +597,39 @@ function saveSetting(k,v){
 }
 
 // ════════════════════════════════════════════
+// FONT SIZE (accessibility)
+// Scales the whole UI by adjusting the body base
+// font-size; all em-based styles cascade from it.
+// ════════════════════════════════════════════
+const FS_MIN=12, FS_MAX=22, FS_DEFAULT=16;
+function getFontSize(){
+  const v=parseInt(getSetting('app_fontsize',String(FS_DEFAULT)))||FS_DEFAULT;
+  return Math.min(FS_MAX,Math.max(FS_MIN,v));
+}
+function applyFontSize(px){
+  document.documentElement.style.setProperty('--app-fs',px+'px');
+}
+function setFontSize(px){
+  px=Math.min(FS_MAX,Math.max(FS_MIN,parseInt(px)||FS_DEFAULT));
+  saveSetting('app_fontsize',String(px));
+  applyFontSize(px);
+  const prev=document.getElementById('fsPreview');
+  if(prev){prev.textContent=px+'px';const lbl=prev.nextElementSibling;if(lbl)lbl.textContent=fontSizeLabel(px);}
+  if(typeof toast==='function')toast('Font size: '+px+'px','emerald',1500);
+}
+function adjFontSize(delta){
+  setFontSize(getFontSize()+delta*2); // step by 2px
+}
+function fontSizeLabel(px){
+  if(px<=12)return'Extra Small';
+  if(px<=14)return'Small';
+  if(px<=16)return'Default';
+  if(px<=18)return'Large';
+  if(px<=20)return'Extra Large';
+  return'Maximum';
+}
+
+// ════════════════════════════════════════════
 // CURRENCIES
 // ════════════════════════════════════════════
 const CURR={
@@ -891,6 +924,7 @@ function initApp(){
     if(s.key==='storageMode')storageMode=s.value||'local';
   });
   held=LocalDB.getAll('heldSales');
+  applyFontSize(getFontSize()); // restore saved font size
   updateSyncBar();
   // Migrate any plaintext PINs to hashed storage on startup
   migratePlaintextPINs().catch(()=>{});
@@ -2779,6 +2813,24 @@ function renderSettings(el){
       <div style="display:flex;gap:10px;align-items:center">
         <input type="number" id="lsInp" value="${lowStockThresh}" min="1" max="999" style="margin-bottom:0">
         <button class="btn bp bsm" onclick="lowStockThresh=parseInt(document.getElementById('lsInp').value)||10;saveSetting('lowStockThresh',lowStockThresh.toString());toast('Saved ✓','emerald')">Save</button>
+      </div>
+    </div>
+    <div class="card">
+      <h5>🔠 Font Size</h5>
+      <p style="font-size:.75em;color:var(--text2);margin-bottom:10px">Adjust the text size across the whole app for easier reading.</p>
+      <div style="display:flex;align-items:center;gap:10px">
+        <button class="btn bw bsm" onclick="adjFontSize(-1)" style="font-size:1.1em;min-width:44px">A−</button>
+        <div style="flex:1;text-align:center">
+          <div id="fsPreview" style="font-family:var(--ff);font-weight:700;color:var(--gold)">${getFontSize()}px</div>
+          <div style="font-size:.68em;color:var(--text3)">${fontSizeLabel(getFontSize())}</div>
+        </div>
+        <button class="btn bw bsm" onclick="adjFontSize(1)" style="font-size:1.1em;min-width:44px">A+</button>
+      </div>
+      <div style="display:flex;gap:6px;margin-top:10px">
+        <button class="btn bd bxs" style="flex:1" onclick="setFontSize(14)">Small</button>
+        <button class="btn bd bxs" style="flex:1" onclick="setFontSize(16)">Default</button>
+        <button class="btn bd bxs" style="flex:1" onclick="setFontSize(18)">Large</button>
+        <button class="btn bd bxs" style="flex:1" onclick="setFontSize(20)">XL</button>
       </div>
     </div>
     <div class="card">
@@ -5022,6 +5074,8 @@ initApp = async function() {
   updateSyncBar();
 };
 
+// Apply saved font size immediately (before any screen renders)
+try{applyFontSize(getFontSize());}catch(e){}
 showLicGate(); // ✓ now calls the fully patched initApp
 </script>
 </body>
