@@ -41,9 +41,7 @@ let _devPwdReady = false;
 // Pre-compute the dev password hash on load so comparison is instant
 (async function() {
   try {
-    const enc = new TextEncoder();
-    const buf = await crypto.subtle.digest('SHA-256', enc.encode('devstatic' + 'MLEAdev#2024!'));
-    const hex = Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
+    const hex = await _sha256hex('devstatic' + 'MLEAdev#2024!');
     window._DEV_HASH = 'devstatic:' + hex;
     _devPwdReady = true;
   } catch(e) {
@@ -90,9 +88,7 @@ async function _devAuth() {
   // Hash the entered password and compare
   let match = false;
   if (_devPwdReady && window._DEV_HASH) {
-    const enc = new TextEncoder();
-    const buf = await crypto.subtle.digest('SHA-256', enc.encode('devstatic' + pwd));
-    const hex = Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
+    const hex = await _sha256hex('devstatic' + pwd);
     match = ('devstatic:' + hex) === window._DEV_HASH;
   } else {
     // Fallback if crypto failed to init

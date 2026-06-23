@@ -193,9 +193,7 @@ async function generateReceiptHash(sale) {
     sale.tax ? sale.tax.toFixed(2) : '0.00',
   ].join('||');
   try {
-    const enc = new TextEncoder();
-    const buf = await crypto.subtle.digest('SHA-256', enc.encode(payload));
-    return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join('');
+    return await _sha256hex(payload);
   } catch(e) { return ''; }
 }
 
