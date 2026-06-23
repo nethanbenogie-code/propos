@@ -1,90 +1,30 @@
-/**
- * MemoryOS — sw.js
- *
- * Offline strategy: the app shell is precached, served cache-first, and
- * refreshed in the background (stale-while-revalidate). User data never
- * passes through here — it lives in IndexedDB, untouched by caching.
- *
- * Releasing an update = bump CACHE_VERSION. Old caches are deleted on
- * activate, and GitHub Pages serves the new files on next load.
- */
-
-const CACHE_VERSION = "memoryos-v0.3.0";
-
-const APP_SHELL = [
-  "./",
-  "./index.html",
-  "./manifest.webmanifest",
-  "./css/app.css",
-  "./js/app.js",
-  "./js/core/ids.js",
-  "./js/core/events.js",
-  "./js/data/models.js",
-  "./js/data/db.js",
-  "./js/data/repository.js",
-  "./js/services/memory-service.js",
-  "./js/services/search-service.js",
-  "./js/services/journal-service.js",
-  "./js/services/rewards-service.js",
-  "./js/services/reminder-service.js",
-  "./js/services/backup-service.js",
-  "./js/services/lock-service.js",
-  "./js/services/mnemosyne-service.js",
-  "./js/ui/components.js",
-  "./js/ui/celebration.js",
-  "./js/ui/backup-view.js",
-  "./js/ui/share.js",
-  "./js/ui/about-view.js",
-  "./js/ui/manual-view.js",
-  "./js/ui/lock-screen.js",
-  "./js/ui/second-brain-view.js",
-  "./js/ui/memory-card-capture.js",
-  "./docs/USER-MANUAL.md",
-  "./js/ui/capture.js",
-  "./js/ui/timeline-view.js",
-  "./js/ui/search-view.js",
-  "./js/ui/tasks-view.js",
-  "./js/ui/journal-view.js",
-  "./icons/icon-192.png",
-  "./icons/icon-512.png",
+// MLEA POS Service Worker v6.0 (modular build)
+const CACHE = 'mlea-pos-v6-modular';
+const ASSETS = [
+  './','./index.html','./css/styles.css','./manifest.json',
+  './js/01-core.js','./js/02-storage.js','./js/03-security.js','./js/04-license.js',
+  './js/05-init-login.js','./js/06-dashboard.js','./js/07-pos.js','./js/08-receipts.js',
+  './js/09-inventory.js','./js/10-users.js','./js/11-sales-returns.js','./js/12-bir-readings.js',
+  './js/13-reports-misc.js','./js/14-dev-console.js','./js/15-pwa-auth-or.js','./js/16-bir-books.js',
+  './js/17-storage-idb.js','./js/18-features.js','./js/19-patches.js',
+  'https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:wght@300;400;500&family=DM+Mono:wght@400;500&display=swap',
 ];
-
-self.addEventListener("install", (event) => {
-  event.waitUntil(
-    caches.open(CACHE_VERSION).then((cache) => cache.addAll(APP_SHELL))
-  );
-  self.skipWaiting();
+self.addEventListener('install', e => {
+  e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS)).then(() => self.skipWaiting()));
 });
-
-self.addEventListener("activate", (event) => {
-  event.waitUntil(
-    caches.keys().then((keys) =>
-      Promise.all(
-        keys.filter((key) => key !== CACHE_VERSION).map((key) => caches.delete(key))
-      )
-    ).then(() => self.clients.claim())
-  );
+self.addEventListener('activate', e => {
+  e.waitUntil(caches.keys().then(keys => Promise.all(
+    keys.filter(k => k !== CACHE).map(k => caches.delete(k))
+  )).then(() => self.clients.claim()));
 });
-
-self.addEventListener("fetch", (event) => {
-  const { request } = event;
-  if (request.method !== "GET") return;
-
-  const url = new URL(request.url);
-  if (url.origin !== self.location.origin) return;
-
-  event.respondWith(
-    caches.match(request).then((cached) => {
-      const refresh = fetch(request)
-        .then((response) => {
-          if (response.ok) {
-            const copy = response.clone();
-            caches.open(CACHE_VERSION).then((cache) => cache.put(request, copy));
-          }
-          return response;
-        })
-        .catch(() => cached);
-      return cached || refresh;
-    })
-  );
+self.addEventListener('fetch', e => {
+  const url = new URL(e.request.url);
+  if (url.hostname.includes('firebase') || (url.hostname.includes('googleapis.com') && url.pathname.includes('script'))) {
+    e.respondWith(fetch(e.request).catch(() => caches.match(e.request)));
+  } else {
+    e.respondWith(caches.match(e.request).then(cached => cached || fetch(e.request).then(res => {
+      if (res.ok) { const clone = res.clone(); caches.open(CACHE).then(c => c.put(e.request, clone)); }
+      return res;
+    })));
+  }
 });

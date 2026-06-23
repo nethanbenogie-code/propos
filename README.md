@@ -1,198 +1,96 @@
-# MLEA POS — BIR-Ready Point of Sale System
+# MLEA POS v6.0 — Modular Build
 
-A multi-branch, BIR-compliant Point of Sale system for Philippine retail businesses. Built as a single-file Progressive Web App with optional Firebase cloud sync, full offline support, and tamper-evident receipts.
+This is the **modular** version of MLEA POS: the original single-file app
+split into numbered JavaScript modules plus a separate stylesheet, while
+behaving **identically** to the monolith.
 
-> **Status:** v6.0 · Single-file HTML/CSS/JS · No build step required
+## ⚠️ Two things you MUST know
 
----
-
-## Features
-
-### Point of Sale
-- Touch-friendly POS terminal with product search and category tabs
-- Quantity editor, hold/park sale, split payment (cash + card)
-- Item-level and order-level discounts
-- Quick-cash buttons and change computation
-- Session timeout with warning, PIN lockout after failed attempts
-
-### BIR Compliance
-- Sequential OR/SI numbering (server-atomic when online, reserved blocks when offline)
-- Per-item VAT classification (VATable / VAT-exempt / zero-rated) at 12%
-- Senior Citizen / PWD automatic 20% discount and VAT exemption
-- Grand Accumulated Total (GAT) with controlled, logged reset
-- X-Reading (shift snapshot) and Z-Reading (end-of-day)
-- Sales Book and Purchases Book (RR 9-2009 columnar format)
-- BIR Form 2550M monthly VAT summary
-- Audit trail export for inspection
-- **Receipt integrity:** SHA-256 hash + QR code on every receipt for tamper detection
-
-### Receipts
-- Thermal (80mm) and A4 formats
-- Business logo upload
-- Barcode (Code 128) and verification QR
-- Email receipt via EmailJS
-
-### Cloud & Sync (optional)
-- Firebase Firestore storage with offline queue
-- Firebase Authentication (per-device gate)
-- Cloud Functions for atomic OR numbering and aggregates
-- Automated daily cloud backup
-- Firestore security rules (role-based, append-only audit logs)
-
-### Reliability
-- IndexedDB primary storage with localStorage fallback
-- **Storage safety polyfill** — runs even when browser storage is blocked
-- Storage quota monitor (warns at 70%, alerts at 90%)
-- Global error boundary with crash-cart recovery
-
-### Management
-- Role-based users (Admin / Manager / Cashier)
-- Full user management: add, edit, delete, change PIN, assign branch
-- **PIN security:** SHA-256 hashing with per-user salt (never plaintext)
-- Customer database with loyalty points
-- Multi-branch support with per-branch data scoping
-- Hidden developer console for database repair (password-protected, fully logged)
-
-### Progressive Web App
-- Installable on Windows, Android, iOS
-- Full offline operation via service worker
-- Add-to-home-screen support
-
----
-
-## Quick Start
-
-### Option 1 — Single File (simplest)
-
-Download `mlea-pos-v6.html` and open it.
-
-> ⚠️ **Important:** For full functionality (data persistence, service worker, IndexedDB), serve it over HTTP rather than opening directly from the file system. Opening via `file://` works but won't save data between sessions in most browsers.
-
-```bash
-# From the folder containing the file:
-python3 -m http.server 8080
-# Then open http://localhost:8080/mlea-pos-v6.html
-```
-
-### Option 2 — Modular Build
-
-Use `mlea-pos-v6-modular.zip` if you want to edit individual features. Extract it and serve `index.html`:
-
-```bash
-unzip mlea-pos-v6-modular.zip -d mlea-pos
-cd mlea-pos
-python3 -m http.server 8080
-# Then open http://localhost:8080
-```
-
-### Demo Access
-
-On the license screen, use the demo key:
-
-```
-MLEA-DEMO-UNLOCK-KEY1
-```
-
-It's shown on screen — click it to auto-fill, then press **Activate License**. The demo key works fully offline.
-
----
-
-## Repository Structure
-
-```
-mlea-pos-v6.html              Single-file application (recommended)
-mlea-pos-v6-modular.zip        Modular build (19 JS modules + CSS)
-sw.js                          Service worker (PWA offline cache)
-manifest.json                  PWA manifest
-firestore.rules                Firebase security rules
-functions-index.js             Firebase Cloud Functions
-
-README.md                      This file
-LICENSE                        Proprietary commercial license
-EULA.md                        Plain-language end-user agreement
-PRICING.md                     License tiers and pricing
-CHANGELOG.md                   Version history
-
-docs/
-  MLEA_POS_System_Description.docx        BIR accreditation: technical description
-  MLEA_POS_Application_Sworn_Statement.docx  BIR accreditation: application + sworn statement
-  MLEA_POS_Sample_Receipts_Readings.docx  BIR accreditation: sample receipts & readings
-```
-
----
-
-## Firebase Setup (optional)
-
-The app runs fully standalone using browser storage. To enable cloud sync across devices:
-
-1. Create a Firebase project at [console.firebase.google.com](https://console.firebase.google.com)
-2. Enable **Firestore**, **Authentication** (Email/Password), and **Cloud Functions**
-3. Deploy the security rules:
-   ```bash
-   firebase deploy --only firestore:rules
+1. **Serve over HTTP, not `file://`.** Because the app now loads multiple
+   `<script src>` files and a service worker, opening `index.html` by
+   double-clicking it (file://) will not work. Run a local web server:
    ```
-4. Deploy the Cloud Functions:
-   ```bash
-   firebase deploy --only functions
+   # from this folder:
+   python3 -m http.server 8080
+   # then open http://localhost:8080 in your browser
    ```
-5. In the app, go to **Settings → Firebase Setup** and paste your Firebase config
+   For deployment, any static host works (Apache, Nginx, GitHub Pages, etc).
 
----
+2. **Load order is mandatory.** The 19 modules must load in numbered order,
+   and `19-patches.js` MUST be last. `index.html` already has them in the
+   correct order — don't reorder the `<script>` tags.
 
-## Tech Stack
+## File structure
 
-- **Frontend:** Vanilla HTML / CSS / JavaScript (no framework, no build step)
-- **Storage:** IndexedDB + localStorage, optional Firebase Firestore
-- **Crypto:** Web Crypto API (SHA-256) for PIN hashing and receipt integrity
-- **Backend (optional):** Firebase Auth, Firestore, Cloud Functions
-- **Libraries (CDN, loaded on demand):** bwip-js (barcodes), qrcode.js (QR), EmailJS (email receipts)
+```
+index.html              ← entry point (loads CSS + 19 modules in order)
+css/
+  styles.css            ← all styles (extracted from the old <style> block)
+js/
+  01-core.js            ← storage-safety polyfill, dialogs, toast,
+                          settings + font-size helpers, currencies,
+                          global variables, BIR helpers
+  02-storage.js         ← LocalDB, FirebaseDB, offline queue, unified DB
+  03-security.js        ← PIN hashing (SHA-256+salt), session timer, lockout
+  04-license.js         ← license gate + activation
+  05-init-login.js      ← initApp, login, sidebar, view switcher (sw)
+  06-dashboard.js       ← dashboard view
+  07-pos.js             ← POS terminal, cart, split pay, sale complete, void
+  08-receipts.js        ← thermal + A4 receipt printing
+  09-inventory.js       ← branches, suppliers, POs, products (search+paging)
+  10-users.js           ← user management
+  11-sales-returns.js   ← sales history, voided, returns
+  12-bir-readings.js    ← X/Z readings, BIR setup
+  13-reports-misc.js    ← reports, activity log, Firebase setup, backup,
+                          settings, low-stock toast, modal, keyboard
+  14-dev-console.js     ← hidden developer repair console
+  15-pwa-auth-or.js     ← PWA install, Firebase Auth, Cloud OR, receipt hash/QR
+  16-bir-books.js       ← sales book, 2550M, expenses, purchases book,
+                          audit export, OR reservation
+  17-storage-idb.js     ← IndexedDB adapter, storage quota, error boundary
+  18-features.js        ← receipt logo, customer DB, barcode, email receipts
+  19-patches.js         ← ALL runtime patches + viewMap population + boot.
+                          MUST LOAD LAST.
+sw.js                   ← service worker (caches all modules for offline/PWA)
+manifest.json           ← PWA manifest
+firestore.rules         ← Firebase security rules (if using cloud sync)
+functions-index.js      ← Firebase Cloud Functions (atomic OR counter)
+```
 
----
+## How the shared-scope split works
 
-## BIR Compliance Notes
+All modules share one global scope (no `import`/`export`). A function in
+`07-pos.js` can call a function in `02-storage.js` directly, exactly as in
+the original single file. The numbered load order guarantees that by the
+time `19-patches.js` runs its overrides (e.g. the async `_finalizePay`,
+the `renderPOS` customer-chip patch, and the `viewMap` population), every
+function it references already exists.
 
-This software implements the technical features required for BIR compliance — receipt content, VAT computation, serial numbering, X/Z readings, GAT, audit trail, Sales/Purchases books, and receipt integrity verification.
+Note: `viewMap` is declared empty in `05-init-login.js` and populated in
+`19-patches.js` (after all `render*` functions exist). This is the one
+piece that had to move when splitting — `sw()` still references it safely
+because `sw()` only runs at click-time, never at load-time.
 
-**However, software features alone do not make a deployment legally compliant.** Before using this in a live business, the following administrative steps are required and are *not* handled by the code:
+## Editing tips
 
-1. **BIR Accreditation** of the POS software as a product (RR 11-2004). Draft application documents are provided in `docs/`.
-2. **Permit to Use (PTU)** — each business must register its installation with its Revenue District Office (RDO).
-3. **CAS Registration** — if used as books of account, register as a Computerized Accounting System with the RDO.
+- Need to change the POS? Open `js/07-pos.js`.
+- Change a colour or layout? `css/styles.css`.
+- Add a brand-new view? Define `renderX` in the relevant module, then add
+  `viewMap.x = renderX;` in `19-patches.js` and a sidebar link.
+- After editing, just reload the page (clear the service-worker cache or
+  bump the `CACHE` name in `sw.js` if changes don't show — see below).
 
-> ⚠️ The BIR accreditation documents in `docs/` are **starting templates only**. Revenue Regulations change. Verify current requirements directly with the BIR and consult a Philippine tax professional before filing. These documents are not legal or tax advice.
+## Service worker cache busting
 
----
+If you edit a module and don't see changes, the service worker may be
+serving the cached old copy. Bump the version string in `sw.js`:
+```js
+const CACHE = 'mlea-pos-v6-modular';   // → change to v6-modular-2, etc.
+```
+then reload twice.
 
-## Security
+## Selling note
 
-- PINs are stored as SHA-256 hashes with a unique per-user salt — never in plaintext
-- Legacy plaintext PINs are automatically upgraded on next login
-- Completed sales cannot be deleted; voids are logged and preserve the original record
-- Audit logs are append-only when using the Firebase backend
-- The developer console is hidden, password-protected, and logs every access
-
-> **Note on the license server:** the included license check calls a Google Apps Script endpoint and is intended as a lightweight gate, not strong DRM. It is client-side and can be bypassed. Treat it accordingly.
-
----
-
-## Browser Support
-
-Works on any modern browser (Chrome, Edge, Firefox, Safari) on desktop or mobile. Best experience on Chrome/Edge for full PWA install support.
-
----
-
-## License
-
-**MLEA POS is proprietary commercial software.** It is not open-source and may not be copied, redistributed, resold, or modified without a valid license. See the [LICENSE](LICENSE) file for the full terms and [EULA.md](EULA.md) for a plain-language summary.
-
-To purchase a license, contact Gieo Software Solutions (payment via GCash or PayPal). See [PRICING.md](PRICING.md) for license tiers.
-
-Copyright © 2026 Gieo Software Solutions. All rights reserved.
-
-> ⚠️ **Selling commercial software via GitHub — read this:** Because this is a single-file HTML app, all source is fully visible to anyone who can view the repository. A proprietary license makes copying *illegal*, but it does not make it *impossible*. If you're selling licenses, **use a PRIVATE GitHub repository** and distribute the file only to paying customers — do not make the code public. A public repo with a proprietary license tells the world "you may not use this," which mainly serves as legal protection, not access control.
-
----
-
-## Disclaimer
-
-This software is provided "as is" without warranty of any kind. BIR compliance requires proper accreditation and registration as described above. The author is not responsible for any tax or legal consequences arising from the use of this software. Always consult the BIR and a qualified tax professional.
+The source is fully visible to anyone who opens the files (it's client-side
+JavaScript). If you sell this, use a **private** GitHub repository and
+distribute only to licensed customers.
